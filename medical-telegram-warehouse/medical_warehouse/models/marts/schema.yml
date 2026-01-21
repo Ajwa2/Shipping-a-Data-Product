@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: dim_channels
+    description: "Dimension table for Telegram channels"
+    columns:
+      - name: channel_key
+        description: "Primary key for channel"
+        tests:
+          - unique
+          - not_null
+      - name: total_messages
+        description: "Total number of messages from this channel"
+      - name: messages_with_media
+        description: "Number of messages with media"
+      - name: media_ratio
+        description: "Ratio of messages with media"
+
+  - name: fct_messages
+    description: "Fact table for messages with enriched attributes"
+    columns:
+      - name: message_id
+        description: "Unique message identifier"
+        tests:
+          - unique
+          - not_null
+      - name: channel_name
+        description: "Name of the Telegram channel"
+      - name: mentions_price
+        description: "Whether message mentions price"
+      - name: product_type
+        description: "Inferred product type from message text"
+
+  - name: fct_enriched_messages
+    description: "Fact table for messages enriched with YOLO detections"
+    columns:
+      - name: message_id
+        description: "Unique message identifier"
+        tests:
+          - unique
+          - not_null
+      - name: detected_objects
+        description: "List of detected object classes"
+      - name: yolo_detections
+        description: "Full YOLO detection results with confidence scores"

@@ -1,0 +1,3 @@
+"""
+Telegram scraper module
+"""

@@ -1,0 +1,3 @@
+"""
+PostgreSQL loader module
+"""

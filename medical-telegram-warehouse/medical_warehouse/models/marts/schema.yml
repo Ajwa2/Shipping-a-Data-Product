@@ -153,3 +153,54 @@ models:
         description: "JSONB array of detected object class names"
       - name: yolo_detections
         description: "JSONB array of full YOLO detection results with confidence scores and bounding boxes"
+
+  - name: fct_image_detections
+    description: |
+      Fact table for image detections from YOLO analysis.
+      Joins enriched_messages (YOLO results) with fct_messages to provide
+      analytical insights about image content and engagement metrics.
+      This table enables analysis of how image content types (promotional, product_display, lifestyle)
+      correlate with engagement metrics (views, forwards).
+    columns:
+      - name: message_id
+        description: "Primary key - unique message identifier"
+        tests:
+          - unique
+          - not_null
+      - name: channel_key
+        description: "Foreign key to dim_channels"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_channels')
+              field: channel_key
+      - name: date_key
+        description: "Foreign key to dim_dates"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_dates')
+              field: date_key
+      - name: detection_count
+        description: "Number of objects detected in the image"
+      - name: image_category
+        description: "Classification: promotional (person+product), product_display (product only), lifestyle (person only), other"
+        tests:
+          - accepted_values:
+              values: ['promotional', 'product_display', 'lifestyle', 'other']
+      - name: confidence_score
+        description: "Average confidence score of all detections (0.0 to 1.0)"
+      - name: has_person
+        description: "Boolean flag indicating if a person was detected"
+      - name: has_product
+        description: "Boolean flag indicating if a product (bottle/container) was detected"
+      - name: detected_objects
+        description: "Comma-separated list of detected object class names"
+      - name: view_count
+        description: "Number of views on the message (from fct_messages)"
+      - name: forward_count
+        description: "Number of forwards on the message (from fct_messages)"
+      - name: image_path
+        description: "File path to the image"
+      - name: detections_json
+        description: "Full JSONB array of YOLO detection results with bounding boxes and confidence scores"

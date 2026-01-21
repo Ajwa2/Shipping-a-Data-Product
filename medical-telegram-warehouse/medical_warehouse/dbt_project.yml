@@ -22,3 +22,5 @@ models:
       +materialized: view
     marts:
       +materialized: table
+      fct_enriched_messages:
+        +enabled: false  # Disable until enriched_messages table exists

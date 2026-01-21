@@ -13,6 +13,6 @@ SELECT
     rm.forwards,
     rm.has_media
 FROM {{ source('raw', 'enriched_messages') }} em
-LEFT JOIN {{ source('raw', 'raw_messages') }} rm
+LEFT JOIN {{ source('raw', 'telegram_messages') }} rm
     ON em.message_id = rm.message_id
 WHERE em.detected_objects IS NOT NULL

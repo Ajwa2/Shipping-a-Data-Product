@@ -22,7 +22,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from telethon import TelegramClient
-from telethon.errors import FloodWaitError, NetworkError, ChannelPrivateError
+from telethon.errors import FloodWaitError, ChannelPrivateError
 from telethon.tl.types import MessageMediaPhoto
 from dotenv import load_dotenv
 
@@ -39,7 +39,15 @@ class TelegramScraper:
         self.base_path = Path(base_path)
         self.api_id = int(os.getenv("TELEGRAM_API_ID", "0"))
         self.api_hash = os.getenv("TELEGRAM_API_HASH", "")
-        self.client = TelegramClient("telegram_scraper_session", self.api_id, self.api_hash)
+        self.phone = os.getenv("TELEGRAM_PHONE", "")
+        
+        # Use session file name based on phone to avoid conflicts
+        session_name = "telegram_scraper_session"
+        if self.phone:
+            # Clean phone number for filename
+            session_name = f"telegram_scraper_{self.phone.replace('+', '').replace('-', '')}"
+        
+        self.client = TelegramClient(session_name, self.api_id, self.api_hash)
         
         if not self.api_id or not self.api_hash:
             raise ValueError("TELEGRAM_API_ID and TELEGRAM_API_HASH must be set in .env")
@@ -200,7 +208,7 @@ class TelegramScraper:
             # Log that we hit rate limit but continue with what we have
             self.logger.info(f"Rate limit wait complete. Continuing with {len(messages)} messages collected so far.")
         
-        except NetworkError as e:
+        except (ConnectionError, OSError) as e:
             error_msg = f"Network error while scraping {channel}: {str(e)}"
             self.logger.error(error_msg)
             self.stats["errors"].append({"channel": channel, "error": error_msg})
@@ -313,7 +321,11 @@ class TelegramScraper:
     
     async def close(self):
         """Close the Telegram client"""
-        await self.client.disconnect()
+        try:
+            if self.client.is_connected():
+                await self.client.disconnect()
+        except Exception as e:
+            self.logger.warning(f"Error during disconnect: {e}")
 
 
 async def scrape_all_channels(

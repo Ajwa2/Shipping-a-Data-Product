@@ -2,10 +2,11 @@ version: 2
 
 sources:
   - name: raw
-    schema: public
+    schema: raw
+    description: "Raw data schema containing unprocessed Telegram messages"
     tables:
-      - name: raw_messages
-        description: "Raw messages from Telegram channels"
+      - name: telegram_messages
+        description: "Raw messages scraped from Telegram channels. This table contains unprocessed data directly from the data lake."
         columns:
           - name: message_id
             description: "Unique message identifier"
@@ -37,18 +38,45 @@ sources:
 
 models:
   - name: stg_messages
-    description: "Staging model for cleaned messages"
+    description: |
+      Staging model that cleans and standardizes raw Telegram messages.
+      This model:
+      - Casts data types appropriately (dates, integers, booleans)
+      - Removes invalid records (null message_ids, empty channels, future dates)
+      - Adds calculated fields (message_length, has_text, has_image)
+      - Ensures non-negative values for views and forwards
+      - Filters messages from the last 2 years
     columns:
       - name: message_id
-        description: "Unique message identifier"
+        description: "Unique message identifier from Telegram"
         tests:
           - unique
           - not_null
       - name: channel_name
-        description: "Name of the Telegram channel"
+        description: "Normalized channel name (lowercase, trimmed)"
         tests:
           - not_null
+      - name: channel_title
+        description: "Display title of the Telegram channel"
       - name: message_date
-        description: "Timestamp of the message"
+        description: "Timestamp when the message was posted (validated to be within reasonable range)"
         tests:
           - not_null
+      - name: message_text
+        description: "Cleaned text content of the message (trimmed, nulls converted to empty string)"
+      - name: message_length
+        description: "Length of the message text in characters (calculated field)"
+      - name: has_text
+        description: "Boolean flag indicating if message has non-empty text (calculated field)"
+      - name: has_media
+        description: "Boolean flag indicating if message contains media"
+      - name: has_image
+        description: "Boolean flag indicating if message has a downloaded image (calculated field)"
+      - name: image_path
+        description: "File path to downloaded image if present"
+      - name: views
+        description: "Number of views on the message (ensured to be non-negative)"
+      - name: forwards
+        description: "Number of times the message was forwarded (ensured to be non-negative)"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded into the database"

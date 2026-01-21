@@ -24,11 +24,19 @@ class PostgresLoader:
         self.engine = create_engine(self.database_url)
         self.Session = sessionmaker(bind=self.engine)
     
+    def create_raw_schema(self):
+        """Create raw schema if it doesn't exist"""
+        with self.engine.connect() as conn:
+            conn.execute(text("CREATE SCHEMA IF NOT EXISTS raw"))
+            conn.commit()
+            print("Raw schema created/verified")
+    
     def create_raw_table(self):
-        """Create raw_messages table if it doesn't exist"""
+        """Create raw.telegram_messages table if it doesn't exist"""
+        self.create_raw_schema()
         with self.engine.connect() as conn:
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS raw_messages (
+                CREATE TABLE IF NOT EXISTS raw.telegram_messages (
                     message_id BIGINT PRIMARY KEY,
                     channel_name VARCHAR(255) NOT NULL,
                     channel_title VARCHAR(255),
@@ -42,7 +50,7 @@ class PostgresLoader:
                 )
             """))
             conn.commit()
-            print("Raw messages table created/verified")
+            print("Raw.telegram_messages table created/verified")
     
     def create_enriched_table(self):
         """Create enriched_messages table for YOLO detections"""
@@ -62,7 +70,7 @@ class PostgresLoader:
             conn.commit()
             print("Enriched messages table created/verified")
     
-    def load_from_json(self, json_path: Path, table_name: str = "raw_messages"):
+    def load_from_json(self, json_path: Path, table_name: str = "raw.telegram_messages"):
         """
         Load messages from JSON file to PostgreSQL
         
@@ -92,10 +100,17 @@ class PostgresLoader:
             df['has_media'] = df['has_media'].astype(bool)
         
         # Load to database (append mode, ignore duplicates)
+        # Handle schema-qualified table names
+        if '.' in table_name:
+            schema, table = table_name.split('.', 1)
+        else:
+            schema, table = None, table_name
+        
         try:
             df.to_sql(
-                table_name,
+                table,
                 self.engine,
+                schema=schema,
                 if_exists='append',
                 index=False,
                 method='multi'
@@ -150,7 +165,7 @@ class PostgresLoader:
                 continue
             self.load_from_json(json_file)
     
-    def get_table_count(self, table_name: str) -> int:
+    def get_table_count(self, table_name: str = "raw.telegram_messages") -> int:
         """Get row count from a table"""
         with self.engine.connect() as conn:
             result = conn.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
@@ -186,7 +201,7 @@ def load_messages_from_data_lake(
     else:
         print(f"Directory not found: {json_dir}")
     
-    count = loader.get_table_count("raw_messages")
+    count = loader.get_table_count("raw.telegram_messages")
     print(f"Total messages in database: {count}")
     loader.close()
 
